@@ -165,6 +165,7 @@ function monthBounds(month: string) {
 function normalizePersonalOverview(data: any) {
   return {
     month: data.month,
+    currentSavings: money(data.currentSavings ?? 0),
     plan: data.plan ? { ...data.plan, income: money(data.plan.income), savingsTarget: money(data.plan.savingsTarget) } : null,
     expenses: data.expenses.map((expense: any) => ({ ...expense, amount: money(expense.amount) })),
     recurring: data.recurring.map((expense: any) => ({ ...expense, amount: money(expense.amount) })),
@@ -182,18 +183,21 @@ router.get('/personal/overview', asyncHandler(async (req, res) => {
     prisma.personalRecurringExpense.findMany({ where: { userId: user.id, active: true }, orderBy: [{ billingDay: 'asc' }, { title: 'asc' }] }),
     prisma.wishlistItem.findMany({ where: { userId: user.id, status: { not: 'ARCHIVED' } }, orderBy: [{ status: 'asc' }, { createdAt: 'desc' }] })
   ]);
-  res.json(normalizePersonalOverview({ month, plan, expenses, recurring, wishlist }));
+  res.json(normalizePersonalOverview({ month, currentSavings: user.currentSavings, plan, expenses, recurring, wishlist }));
 }));
 
 router.put('/personal/plan', asyncHandler(async (req, res) => {
   const user = await currentUser(req);
-  const body = z.object({ month: monthSchema, income: z.number().nonnegative(), savingsTarget: z.number().nonnegative() }).parse(req.body);
-  const plan = await prisma.personalMonthlyPlan.upsert({
-    where: { userId_month: { userId: user.id, month: body.month } },
-    update: { income: cents(body.income), savingsTarget: cents(body.savingsTarget) },
-    create: { userId: user.id, month: body.month, income: cents(body.income), savingsTarget: cents(body.savingsTarget) }
-  });
-  res.json({ ...plan, income: money(plan.income), savingsTarget: money(plan.savingsTarget) });
+  const body = z.object({ month: monthSchema, income: z.number().nonnegative(), savingsTarget: z.number().nonnegative(), currentSavings: z.number().nonnegative() }).parse(req.body);
+  const [plan, updatedUser] = await prisma.$transaction([
+    prisma.personalMonthlyPlan.upsert({
+      where: { userId_month: { userId: user.id, month: body.month } },
+      update: { income: cents(body.income), savingsTarget: cents(body.savingsTarget) },
+      create: { userId: user.id, month: body.month, income: cents(body.income), savingsTarget: cents(body.savingsTarget) }
+    }),
+    prisma.user.update({ where: { id: user.id }, data: { currentSavings: cents(body.currentSavings) } })
+  ]);
+  res.json({ ...plan, income: money(plan.income), savingsTarget: money(plan.savingsTarget), currentSavings: money(updatedUser.currentSavings) });
 }));
 
 router.post('/personal/expenses', asyncHandler(async (req, res) => {

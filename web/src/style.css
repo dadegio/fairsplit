@@ -637,6 +637,203 @@ select:focus {
 .personal-dashboard {
   max-width: 1220px;
 }
+.shared-dashboard {
+  display: grid;
+  gap: 22px;
+  padding: 30px;
+  color: #f5f7f4;
+  border: 1px solid #294a3b;
+  border-radius: 30px;
+  background: #1d352b;
+  box-shadow: 0 20px 50px rgba(26,51,40,.18);
+}
+.shared-dashboard-head,
+.personal-money-head,
+.shared-block-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.shared-dashboard-head h2 {
+  margin: 7px 0 5px;
+  color: #fff;
+  font-size: clamp(27px, 4vw, 42px);
+  letter-spacing: -.04em;
+}
+.shared-dashboard-head p {
+  max-width: 680px;
+  margin: 0;
+  color: #c7d7cf;
+  line-height: 1.5;
+}
+.shared-dashboard-head .primary {
+  flex: 0 0 auto;
+  color: #193126;
+  background: #9bddbd;
+}
+.shared-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+.shared-metric-grid article {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 19px;
+  background: rgba(255,255,255,.055);
+}
+.shared-metric-grid span,
+.shared-metric-grid small { color: #bdcec5; }
+.shared-metric-grid strong {
+  overflow-wrap: anywhere;
+  color: #fff;
+  font-size: clamp(25px, 4vw, 37px);
+  letter-spacing: -.035em;
+}
+.shared-metric-grid .metric-alert { background: rgba(151,73,66,.18); }
+.shared-metric-grid .metric-positive { background: rgba(76,139,107,.17); }
+.shared-home-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, .9fr);
+  gap: 12px;
+}
+.shared-groups-home,
+.shared-activity-home {
+  min-width: 0;
+  padding: 19px;
+  color: #263a31;
+  border-radius: 22px;
+  background: #f8f7f2;
+}
+.shared-block-title h3 {
+  margin: 3px 0 0;
+  font-size: 21px;
+}
+.shared-block-title .ghost { padding: 7px 0; }
+.home-group-list,
+.home-balance-list,
+.recent-shared-list {
+  display: grid;
+  gap: 2px;
+  margin-top: 12px;
+}
+.home-group-list > button,
+.recent-shared-list > button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 11px;
+  align-items: center;
+  padding: 12px 2px;
+  color: inherit;
+  border-bottom: 1px solid #e7e2d9;
+  border-radius: 0;
+  background: transparent;
+  text-align: left;
+}
+.home-group-list > button:last-child,
+.recent-shared-list > button:last-child { border-bottom: 0; }
+.home-group-list > button > span:nth-child(2),
+.recent-shared-list > button > span { display: grid; gap: 3px; min-width: 0; }
+.home-group-list small,
+.recent-shared-list small,
+.home-balance-list small,
+.muted-home-copy { color: #748078; }
+.home-group-avatar {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  color: #25523f;
+  background: #dfece4;
+  font-size: 12px;
+  font-weight: 900;
+}
+.home-balance-list > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 0;
+  border-bottom: 1px solid #e7e2d9;
+}
+.home-balance-list > div > span:nth-child(2) { display: grid; gap: 2px; }
+.balance-direction {
+  padding: 5px 7px;
+  border-radius: 999px;
+  color: #296247;
+  background: #e0eee5;
+  font-size: 9px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.balance-direction.owe { color: #914c45; background: #f4e4e1; }
+.recent-shared-title {
+  margin-top: 13px;
+  padding-top: 13px;
+  border-top: 1px solid #dcd6cc;
+  color: #66736b;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+.recent-shared-list { margin-top: 4px; }
+.recent-shared-list > button { grid-template-columns: minmax(0, 1fr) auto; }
+.personal-money-overview {
+  display: grid;
+  gap: 17px;
+}
+.personal-money-head h2 { margin: 4px 0 0; }
+.personal-money-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+.personal-money-grid article {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e5e1d8;
+  border-radius: 17px;
+  background: #fbfaf7;
+}
+.personal-money-grid article.savings-total { color: #fff; border-color: #365b49; background: #315442; }
+.personal-money-grid article.negative { color: #8f4943; background: #f8ebe9; }
+.personal-money-grid span,
+.personal-money-grid small { color: #6d786f; }
+.personal-money-grid .savings-total span,
+.personal-money-grid .savings-total small { color: #cfe0d7; }
+.personal-money-grid strong {
+  overflow-wrap: anywhere;
+  font-size: clamp(21px, 3vw, 29px);
+  letter-spacing: -.025em;
+}
+.personal-budget-progress {
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+.personal-budget-progress > span {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e5e1d8;
+}
+.personal-budget-progress i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #4e806a;
+}
+.personal-budget-progress small { color: #6b776f; }
 .budget-hero {
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
@@ -739,7 +936,7 @@ select:focus {
   margin: 3px 0 0;
 }
 .plan-form {
-  grid-template-columns: 1fr 1fr auto;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
   align-items: end;
   margin-top: 18px;
 }
@@ -990,9 +1187,11 @@ select:focus {
 @media (max-width: 1000px) {
   .budget-hero,
   .quick-personal-expense,
-  .personal-overview-grid {
+  .personal-overview-grid,
+  .shared-home-columns {
     grid-template-columns: 1fr;
   }
+  .personal-money-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .quick-personal-expense form {
     grid-template-columns: 1fr 150px 150px auto;
   }
@@ -1003,6 +1202,17 @@ select:focus {
   .sidebar { background: rgba(24,35,30,.97); }
   .personal-home-wrap,
   .personal-dashboard { gap: 12px; }
+  .shared-dashboard { gap: 16px; padding: 21px 16px; border-radius: 24px; }
+  .shared-dashboard-head,
+  .personal-money-head { align-items: stretch; flex-direction: column; }
+  .shared-dashboard-head .primary,
+  .personal-money-head .secondary { width: 100%; }
+  .shared-metric-grid { grid-template-columns: 1fr; }
+  .shared-metric-grid article { padding: 14px; }
+  .shared-groups-home,
+  .shared-activity-home { padding: 15px; }
+  .personal-money-grid { grid-template-columns: 1fr; }
+  .personal-budget-progress { grid-template-columns: 1fr; }
   .budget-hero {
     gap: 20px;
     padding: 23px 19px;

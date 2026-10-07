@@ -13,6 +13,7 @@ model User {
   name String
   passwordHash String
   defaultCurrency String @default("EUR")
+  currentSavings Int @default(0)
   createdAt DateTime @default(now())
   memberships GroupMember[]
   paid ExpensePayer[]

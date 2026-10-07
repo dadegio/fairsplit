@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Archive, Bell, CalendarDays, Camera, Check, ChevronRight, Download, ExternalLink, Home, LogOut, Mail, PiggyBank, PieChart as PieIcon, Plus, ReceiptText, Save, Search, ShoppingBag, Sparkles, Trash2, UserPlus, Users } from 'lucide-react';
+import { Archive, Bell, Camera, Check, ChevronRight, Download, ExternalLink, Home, LogOut, Mail, PiggyBank, PieChart as PieIcon, Plus, ReceiptText, Save, Search, ShoppingBag, Sparkles, Trash2, UserPlus, Users } from 'lucide-react';
 import { api, clearAuthToken, downloadCsv, fmt, hasAuthToken, setAuthToken } from './api';
 import './style.css';
 
-type User = { id: string; name: string; email: string; defaultCurrency: string };
+type User = { id: string; name: string; email: string; defaultCurrency: string; currentSavings?: number };
 type Group = { id: string; name: string; type: string; currency: string; simplifyDebts: boolean; members: { user: User; role: string }[]; _count?: { expenses: number } };
 type Expense = { id: string; groupId?: string; title: string; category: string; description?: string; total: number; currency: string; splitKind: string; date: string; group?: Group; payers: any[]; splits: any[] };
 type Balance = { from: string; to: string; amount: number; currency: string };
@@ -17,6 +17,7 @@ type RecurringExpense = { id: string; title: string; amount: number; billingDay:
 type WishlistItem = { id: string; title: string; estimatedCost: number; priority: 'LOW' | 'MEDIUM' | 'HIGH'; status: 'PLANNED' | 'BOUGHT' | 'ARCHIVED'; targetDate?: string };
 type PersonalOverview = {
   month: string;
+  currentSavings: number;
   plan: null | { id: string; month: string; income: number; savingsTarget: number; updatedAt: string };
   expenses: PersonalExpense[];
   recurring: RecurringExpense[];
@@ -245,7 +246,6 @@ function App({ onLogout }: { onLogout: () => void }) {
   const amount = parseAmount(amountInput);
   const totalAll = useMemo(() => (allExpenses.data ?? []).reduce((sum, e) => sum + e.total, 0), [allExpenses.data]);
   const totalGroup = useMemo(() => groupExpenses.reduce((sum, e) => sum + e.total, 0), [groupExpenses]);
-  const openDebt = useMemo(() => (balances.data ?? []).reduce((sum, b) => sum + b.amount, 0), [balances.data]);
   const categoryData = useMemo(() => aggregateByCategory(groupExpenses), [groupExpenses]);
   const userShareData = useMemo(() => aggregateByUserShares(groupExpenses, members), [groupExpenses, members]);
   const splitSum = Object.values(exactSplits).reduce((sum, v) => sum + parseAmount(v), 0);
@@ -335,7 +335,14 @@ function App({ onLogout }: { onLogout: () => void }) {
       {liveNotice && <div className="live-notice"><Bell size={16} /> {liveNotice}</div>}
 
       {tab === 'dashboard' && <section className="personal-home-wrap">
-        <PersonalHome user={me.data!} onOpenShared={() => setTab('expenses')} groupCount={groups.data?.length ?? 0} openDebt={openDebt} />
+        <PersonalHome
+          user={me.data!}
+          groups={groups.data ?? []}
+          balances={balances.data ?? []}
+          sharedExpenses={allExpenses.data ?? []}
+          onOpenShared={(groupId) => { if (groupId) setSelectedGroup(groupId); setTab('expenses'); }}
+          onOpenGroups={() => setTab('groups')}
+        />
         <section className="panel notification-panel personal-notification"><div><h2>Notifiche condivise</h2><p>Ricevi gli aggiornamenti dei gruppi anche quando l’app è chiusa.</p></div><button className="secondary" onClick={() => enableNotifications.mutate()} disabled={enableNotifications.isPending}><Bell size={16} /> {enableNotifications.isPending ? 'Attivo...' : 'Attiva'}</button>{notificationStatus && <small>{notificationStatus}</small>}</section>
       </section>}
 
@@ -386,13 +393,14 @@ function App({ onLogout }: { onLogout: () => void }) {
   </main>;
 }
 
-function PersonalHome({ user, onOpenShared, groupCount, openDebt }: { user: User; onOpenShared: () => void; groupCount: number; openDebt: number }) {
+function PersonalHome({ user, groups, balances, sharedExpenses, onOpenShared, onOpenGroups }: { user: User; groups: Group[]; balances: Balance[]; sharedExpenses: Expense[]; onOpenShared: (groupId?: string) => void; onOpenGroups: () => void }) {
   const qc = useQueryClient();
   const month = currentMonthKey();
   const today = new Date();
   const [planOpen, setPlanOpen] = useState(false);
   const [incomeInput, setIncomeInput] = useState('');
   const [savingsInput, setSavingsInput] = useState('');
+  const [currentSavingsInput, setCurrentSavingsInput] = useState('');
   const [personalTitle, setPersonalTitle] = useState('');
   const [personalAmount, setPersonalAmount] = useState('');
   const [personalCategory, setPersonalCategory] = useState('general');
@@ -415,12 +423,13 @@ function PersonalHome({ user, onOpenShared, groupCount, openDebt }: { user: User
     if (!data) return;
     setIncomeInput(data.plan ? formatMoneyInput(data.plan.income) : '');
     setSavingsInput(data.plan ? formatMoneyInput(data.plan.savingsTarget) : '');
+    setCurrentSavingsInput(formatMoneyInput(data.currentSavings ?? 0));
     if (!data.plan) setPlanOpen(true);
-  }, [data?.plan?.id, data?.plan?.updatedAt]);
+  }, [data?.plan?.id, data?.plan?.updatedAt, data?.currentSavings]);
 
   const refreshPersonal = () => qc.invalidateQueries({ queryKey: ['personal-overview', month] });
   const savePlan = useMutation({
-    mutationFn: (payload: { income: number; savingsTarget: number }) => api('/personal/plan', { method: 'PUT', body: JSON.stringify({ month, ...payload }) }),
+    mutationFn: (payload: { income: number; savingsTarget: number; currentSavings: number }) => api('/personal/plan', { method: 'PUT', body: JSON.stringify({ month, ...payload }) }),
     onSuccess: () => { setPlanOpen(false); refreshPersonal(); }
   });
   const addPersonalExpense = useMutation({
@@ -442,6 +451,7 @@ function PersonalHome({ user, onOpenShared, groupCount, openDebt }: { user: User
 
   const income = data?.plan?.income ?? 0;
   const savingsTarget = data?.plan?.savingsTarget ?? 0;
+  const currentSavings = data?.currentSavings ?? 0;
   const fixedTotal = (data?.recurring ?? []).reduce((sum, expense) => sum + expense.amount, 0);
   const spent = (data?.expenses ?? []).reduce((sum, expense) => sum + expense.amount, 0);
   const spendableAtStart = Math.max(0, income - savingsTarget - fixedTotal);
@@ -452,10 +462,15 @@ function PersonalHome({ user, onOpenShared, groupCount, openDebt }: { user: User
   const spentPercent = spendableAtStart > 0 ? Math.min(100, Math.round(spent / spendableAtStart * 100)) : 0;
   const upcoming = useMemo(() => (data?.recurring ?? []).map(expense => ({ ...expense, due: nextRecurringDate(expense.billingDay, today) })).sort((a, b) => a.due.getTime() - b.due.getTime()).slice(0, 4), [data?.recurring]);
   const currency = user.defaultCurrency || 'EUR';
+  const youOwe = useMemo(() => balances.filter(balance => balance.from === user.id).reduce((sum, balance) => sum + balance.amount, 0), [balances, user.id]);
+  const owedToYou = useMemo(() => balances.filter(balance => balance.to === user.id).reduce((sum, balance) => sum + balance.amount, 0), [balances, user.id]);
+  const relevantBalances = useMemo(() => balances.filter(balance => balance.from === user.id || balance.to === user.id).slice(0, 4), [balances, user.id]);
+  const memberNames = useMemo(() => new Map(groups.flatMap(group => group.members.map(member => [member.user.id, member.user.name] as const))), [groups]);
+  const recentShared = useMemo(() => sharedExpenses.slice(0, 4), [sharedExpenses]);
 
   function submitPlan(e: React.FormEvent) {
     e.preventDefault();
-    savePlan.mutate({ income: parseAmount(incomeInput), savingsTarget: parseAmount(savingsInput) });
+    savePlan.mutate({ income: parseAmount(incomeInput), savingsTarget: parseAmount(savingsInput), currentSavings: parseAmount(currentSavingsInput) });
   }
 
   function submitPersonalExpense(e: React.FormEvent) {
@@ -484,24 +499,56 @@ function PersonalHome({ user, onOpenShared, groupCount, openDebt }: { user: User
   if (overview.error) return <section className="panel"><h2>Non riesco a caricare il budget personale</h2><p className="error">{translateError(overview.error.message)}</p></section>;
 
   return <div className="personal-dashboard">
-    <section className={`budget-hero ${remaining < 0 ? 'over-budget' : ''}`}>
-      <div className="budget-hero-copy">
-        <span className="money-kicker"><CalendarDays size={15} /> Budget di questa settimana</span>
-        <strong>{data?.plan ? fmt(weeklyBudget, currency) : 'Da impostare'}</strong>
-        <p>{data?.plan ? `È la cifra che puoi usare nei prossimi 7 giorni restando dentro il piano di ${monthName(today)}.` : 'Inserisci entrate e obiettivo di risparmio: da quel momento FairSplit farà i conti per te.'}</p>
-        <button type="button" className="budget-settings" onClick={() => setPlanOpen(value => !value)}>{data?.plan ? 'Modifica piano mensile' : 'Imposta il mese'} <ChevronRight size={16} /></button>
+    <section className="shared-dashboard">
+      <div className="shared-dashboard-head">
+        <div><span className="money-kicker"><Users size={15} /> FairSplit condiviso</span><h2>Spese e saldi dei tuoi gruppi</h2><p>Qui trovi subito ciò che devi sistemare con gli altri, senza passare dal budget personale.</p></div>
+        {groups.length ? <button type="button" className="primary" onClick={() => onOpenShared(groups[0]?.id)}><Plus size={17} /> Aggiungi spesa</button> : <button type="button" className="primary" onClick={onOpenGroups}><Plus size={17} /> Crea il primo gruppo</button>}
       </div>
-      <div className="budget-side">
-        <div><span>Disponibile fino a fine mese</span><b>{fmt(remaining, currency)}</b></div>
-        <div><span>Media consigliata al giorno</span><b>{fmt(dailyBudget, currency)}</b></div>
-        <div className="budget-progress"><span style={{ width: `${spentPercent}%` }} /></div>
-        <small>Hai usato il {spentPercent}% del budget libero del mese</small>
+      <div className="shared-metric-grid">
+        <article><span>Gruppi attivi</span><strong>{groups.length}</strong><small>{groups.reduce((sum, group) => sum + group.members.length, 0)} partecipanti complessivi</small></article>
+        <article className={youOwe > 0 ? 'metric-alert' : ''}><span>Devi ancora</span><strong>{fmt(youOwe, currency)}</strong><small>{youOwe > 0 ? 'Pagamenti da regolare' : 'Nessun debito aperto'}</small></article>
+        <article className="metric-positive"><span>Ti devono</span><strong>{fmt(owedToYou, currency)}</strong><small>{owedToYou > 0 ? 'Crediti ancora aperti' : 'Tutto incassato'}</small></article>
+      </div>
+      <div className="shared-home-columns">
+        <div className="shared-groups-home">
+          <div className="shared-block-title"><div><span className="section-kicker">I tuoi spazi</span><h3>Gruppi</h3></div><button type="button" className="ghost" onClick={onOpenGroups}>Gestisci</button></div>
+          {groups.length ? <div className="home-group-list">{groups.slice(0, 4).map(group => {
+            const latest = sharedExpenses.find(expense => expense.groupId === group.id);
+            return <button type="button" key={group.id} onClick={() => onOpenShared(group.id)}>
+              <span className="home-group-avatar">{group.name.slice(0, 2).toUpperCase()}</span>
+              <span><b>{group.name}</b><small>{group.members.length} membri · {group._count?.expenses ?? 0} spese{latest ? ` · ultima ${new Date(latest.date).toLocaleDateString('it-IT')}` : ''}</small></span>
+              <ChevronRight size={18} />
+            </button>;
+          })}</div> : <Empty title="Nessun gruppo" text="Crea un gruppo e invita le persone con cui dividi le spese." />}
+        </div>
+        <div className="shared-activity-home">
+          <div className="shared-block-title"><div><span className="section-kicker">Situazione attuale</span><h3>Saldi aperti</h3></div><button type="button" className="ghost" onClick={() => onOpenShared(groups[0]?.id)}>Apri</button></div>
+          {relevantBalances.length ? <div className="home-balance-list">{relevantBalances.map(balance => {
+            const isMine = balance.from === user.id;
+            const otherId = isMine ? balance.to : balance.from;
+            return <div key={`${balance.from}-${balance.to}-${balance.currency}`}><span className={isMine ? 'balance-direction owe' : 'balance-direction credit'}>{isMine ? 'Da pagare' : 'Da ricevere'}</span><span><b>{isMine ? `Devi a ${memberNames.get(otherId) ?? 'un membro'}` : `${memberNames.get(otherId) ?? 'Un membro'} deve a te`}</b><small>{balance.currency}</small></span><strong>{fmt(balance.amount, balance.currency)}</strong></div>;
+          })}</div> : <p className="balanced-message">Sei in pari con tutti i gruppi.</p>}
+          <div className="recent-shared-title"><span>Ultime spese condivise</span></div>
+          {recentShared.length ? <div className="recent-shared-list">{recentShared.map(expense => <button type="button" key={expense.id} onClick={() => onOpenShared(expense.groupId)}><span><b>{expense.title}</b><small>{expense.group?.name ?? 'Gruppo'} · {new Date(expense.date).toLocaleDateString('it-IT')}</small></span><strong>{fmt(expense.total, expense.currency)}</strong></button>)}</div> : <small className="muted-home-copy">Le prossime spese aggiunte ai gruppi appariranno qui.</small>}
+        </div>
       </div>
     </section>
 
+    <section className={`panel personal-money-overview ${remaining < 0 ? 'over-budget' : ''}`}>
+      <div className="personal-money-head"><div><span className="section-kicker"><PiggyBank size={15} /> Le tue finanze</span><h2>Riepilogo personale</h2></div><button type="button" className="secondary" onClick={() => setPlanOpen(value => !value)}>{data?.plan ? 'Modifica valori' : 'Imposta valori'} <ChevronRight size={16} /></button></div>
+      <div className="personal-money-grid">
+        <article className="savings-total"><span>Patrimonio attuale</span><strong>{fmt(currentSavings, currency)}</strong><small>Tutto ciò che hai già da parte</small></article>
+        <article><span>Budget prossimi 7 giorni</span><strong>{data?.plan ? fmt(weeklyBudget, currency) : 'Da impostare'}</strong><small>{data?.plan ? `${fmt(dailyBudget, currency)} consigliati al giorno` : 'Inserisci le entrate mensili'}</small></article>
+        <article className={remaining < 0 ? 'negative' : ''}><span>Disponibile fino a fine mese</span><strong>{data?.plan ? fmt(remaining, currency) : '—'}</strong><small>Dopo risparmio e spese previste</small></article>
+        <article><span>Prossima spesa fissa</span><strong>{upcoming[0] ? fmt(upcoming[0].amount, currency) : 'Nessuna'}</strong><small>{upcoming[0] ? `${upcoming[0].title} · ${upcoming[0].due.toLocaleDateString('it-IT')}` : 'Aggiungi abbonamenti e scadenze'}</small></article>
+      </div>
+      <div className="personal-budget-progress"><span><i style={{ width: `${spentPercent}%` }} /></span><small>Usato il {spentPercent}% del budget libero di {monthName(today)}</small></div>
+    </section>
+
     {planOpen && <section className="panel plan-editor">
-      <div className="section-title"><div><span className="section-kicker">Piano mensile</span><h2>Due numeri, poi fa tutto l’app</h2></div><button className="ghost" type="button" onClick={() => setPlanOpen(false)}>Chiudi</button></div>
+      <div className="section-title"><div><span className="section-kicker">Piano personale</span><h2>Aggiorna patrimonio e mese</h2></div><button className="ghost" type="button" onClick={() => setPlanOpen(false)}>Chiudi</button></div>
       <form className="form plan-form" onSubmit={submitPlan}>
+        <label>Patrimonio attuale<input type="text" inputMode="decimal" value={currentSavingsInput} onChange={e => setCurrentSavingsInput(cleanMoneyInput(e.target.value))} placeholder="Es. 4.500" /></label>
         <label>Entrate del mese<input type="text" inputMode="decimal" value={incomeInput} onChange={e => setIncomeInput(cleanMoneyInput(e.target.value))} placeholder="Es. 1.200" /></label>
         <label>Voglio mettere da parte<input type="text" inputMode="decimal" value={savingsInput} onChange={e => setSavingsInput(cleanMoneyInput(e.target.value))} placeholder="Es. 250" /></label>
         <button className="primary" disabled={savePlan.isPending || parseAmount(incomeInput) <= 0}><Save size={16} /> Salva piano</button>
@@ -579,9 +626,6 @@ function PersonalHome({ user, onOpenShared, groupCount, openDebt }: { user: User
       })}</div> : <Empty title="Lista desideri vuota" text="Aggiungi qui ciò che vorresti comprare senza trasformarlo subito in una spesa." />}
     </section>
 
-    <button type="button" className="shared-teaser" onClick={onOpenShared}>
-      <div><Users size={21} /><span><b>Spese condivise</b><small>{groupCount} gruppi · {fmt(openDebt, currency)} da saldare</small></span></div><ChevronRight size={20} />
-    </button>
   </div>;
 }
 
