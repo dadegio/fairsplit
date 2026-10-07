@@ -2,7 +2,17 @@
 // Vercel Hobby has a Serverless Function limit, so every /api/* request is
 // rewritten here by vercel.json and then forwarded to the Express app.
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import app from '../server/dist/src/app.js';
+
+// Vercel compiles this entrypoint as CommonJS, while the server workspace is
+// intentionally ESM (server/package.json has `"type": "module"`). A static
+// import is therefore emitted as require(), which crashes at runtime with
+// ERR_REQUIRE_ESM. Keep the import dynamic so Node loads the Express app as ESM.
+let appPromise: Promise<typeof import('../server/dist/src/app.js').default> | undefined;
+
+function loadApp() {
+  appPromise ??= import('../server/dist/src/app.js').then((module) => module.default);
+  return appPromise;
+}
 
 type VercelRequest = IncomingMessage & {
   query?: Record<string, string | string[] | undefined>;
@@ -25,7 +35,8 @@ function rebuildUrl(req: VercelRequest) {
   return `/api/${cleanPath}${qs ? `?${qs}` : ''}`;
 }
 
-export default function handler(req: VercelRequest, res: ServerResponse) {
+export default async function handler(req: VercelRequest, res: ServerResponse) {
   req.url = rebuildUrl(req);
+  const app = await loadApp();
   return app(req as any, res as any);
 }
