@@ -22,6 +22,68 @@ model User {
   comments Comment[]
   pushSubscriptions PushSubscription[]
   receiptArchives ReceiptArchive[]
+  monthlyPlans PersonalMonthlyPlan[]
+  personalExpenses PersonalExpense[]
+  recurringExpenses PersonalRecurringExpense[]
+  wishlistItems WishlistItem[]
+}
+
+model PersonalMonthlyPlan {
+  id String @id @default(cuid())
+  userId String
+  month String
+  income Int @default(0)
+  savingsTarget Int @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, month])
+  @@index([userId, month])
+}
+
+model PersonalExpense {
+  id String @id @default(cuid())
+  userId String
+  title String
+  category String @default("general")
+  amount Int
+  date DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model PersonalRecurringExpense {
+  id String @id @default(cuid())
+  userId String
+  title String
+  amount Int
+  billingDay Int
+  category String @default("home")
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, active])
+}
+
+model WishlistItem {
+  id String @id @default(cuid())
+  userId String
+  title String
+  estimatedCost Int
+  priority String @default("MEDIUM")
+  status String @default("PLANNED")
+  targetDate DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
 }
 
 model Group {

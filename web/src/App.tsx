@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
-import { Archive, Bell, Camera, Download, ExternalLink, Home, LogOut, Mail, PieChart as PieIcon, Plus, ReceiptText, Save, Search, Sparkles, Trash2, UserPlus, Users, WalletCards } from 'lucide-react';
+import { Archive, Bell, CalendarDays, Camera, Check, ChevronRight, Download, ExternalLink, Home, LogOut, Mail, PiggyBank, PieChart as PieIcon, Plus, ReceiptText, Save, Search, ShoppingBag, Sparkles, Trash2, UserPlus, Users } from 'lucide-react';
 import { api, clearAuthToken, downloadCsv, fmt, hasAuthToken, setAuthToken } from './api';
 import './style.css';
 
@@ -12,6 +12,16 @@ type Expense = { id: string; groupId?: string; title: string; category: string; 
 type Balance = { from: string; to: string; amount: number; currency: string };
 type Settlement = { id: string; amount: number; currency: string; note?: string; date: string; fromUser: User; toUser: User; group?: Group };
 type ReceiptArchive = { id: string; groupId: string; expenseId?: string; imageDataUrl: string; fileName?: string; mimeType: string; note?: string; createdAt: string; uploader?: User; group?: Group; expense?: Pick<Expense, 'id' | 'title' | 'total' | 'currency' | 'date'> };
+type PersonalExpense = { id: string; title: string; amount: number; category: string; date: string };
+type RecurringExpense = { id: string; title: string; amount: number; billingDay: number; category: string; active: boolean };
+type WishlistItem = { id: string; title: string; estimatedCost: number; priority: 'LOW' | 'MEDIUM' | 'HIGH'; status: 'PLANNED' | 'BOUGHT' | 'ARCHIVED'; targetDate?: string };
+type PersonalOverview = {
+  month: string;
+  plan: null | { id: string; month: string; income: number; savingsTarget: number; updatedAt: string };
+  expenses: PersonalExpense[];
+  recurring: RecurringExpense[];
+  wishlist: WishlistItem[];
+};
 type Tab = 'dashboard' | 'expenses' | 'groups' | 'insights';
 type AuthMode = 'login' | 'register';
 
@@ -236,10 +246,8 @@ function App({ onLogout }: { onLogout: () => void }) {
   const totalAll = useMemo(() => (allExpenses.data ?? []).reduce((sum, e) => sum + e.total, 0), [allExpenses.data]);
   const totalGroup = useMemo(() => groupExpenses.reduce((sum, e) => sum + e.total, 0), [groupExpenses]);
   const openDebt = useMemo(() => (balances.data ?? []).reduce((sum, b) => sum + b.amount, 0), [balances.data]);
-  const groupTotals = useMemo(() => aggregateGroups(allExpenses.data ?? [], groups.data ?? []), [allExpenses.data, groups.data]);
   const categoryData = useMemo(() => aggregateByCategory(groupExpenses), [groupExpenses]);
   const userShareData = useMemo(() => aggregateByUserShares(groupExpenses, members), [groupExpenses, members]);
-  const recentExpenses = useMemo(() => (allExpenses.data ?? []).slice(0, 5), [allExpenses.data]);
   const splitSum = Object.values(exactSplits).reduce((sum, v) => sum + parseAmount(v), 0);
   const hasSplitError = splitMode === 'exact' && Math.abs(splitSum - amount) > 0.05;
   const memberBalances = useMemo(() => aggregateMemberBalances(groupExpenses, members, settlements.data ?? []), [groupExpenses, members, settlements.data]);
@@ -306,8 +314,8 @@ function App({ onLogout }: { onLogout: () => void }) {
     <aside className="sidebar">
       <div className="brand-lockup mini"><div className="logo"><Sparkles size={20} /></div><span>FairSplit</span></div>
       <nav aria-label="Navigazione principale">
-        <button className={tab === 'dashboard' ? 'active' : ''} onClick={() => setTab('dashboard')}><Home size={18} /> Dashboard</button>
-        <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}><ReceiptText size={18} /> Spese</button>
+        <button className={tab === 'dashboard' ? 'active' : ''} onClick={() => setTab('dashboard')}><Home size={18} /> Home</button>
+        <button className={tab === 'expenses' ? 'active' : ''} onClick={() => setTab('expenses')}><ReceiptText size={18} /> Condivise</button>
         <button className={tab === 'groups' ? 'active' : ''} onClick={() => setTab('groups')}><Users size={18} /> Gruppi</button>
         <button className={tab === 'insights' ? 'active' : ''} onClick={() => setTab('insights')}><PieIcon size={18} /> Grafici</button>
       </nav>
@@ -318,24 +326,17 @@ function App({ onLogout }: { onLogout: () => void }) {
       <header className="topbar">
         <div><span className="eyebrow">{tabLabel(tab)}</span><h1>{tab === 'dashboard' ? `Ciao ${me.data?.name.split(' ')[0] ?? ''}` : currentGroup?.name ?? 'FairSplit'}</h1></div>
         <div className="top-actions">
-          <select value={currentGroup?.id ?? ''} onChange={e => setSelectedGroup(e.target.value)}>
+          {tab !== 'dashboard' && <select value={currentGroup?.id ?? ''} onChange={e => setSelectedGroup(e.target.value)}>
             {(groups.data ?? []).map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-          </select>
+          </select>}
           <button type="button" className="mobile-logout" onClick={onLogout} aria-label="Esci dall'account"><LogOut size={17} /> Esci</button>
         </div>
       </header>
       {liveNotice && <div className="live-notice"><Bell size={16} /> {liveNotice}</div>}
 
-      {tab === 'dashboard' && <section className="dashboard-grid dashboard-simple dashboard-clean">
-        <Metric icon={<Users />} title="Gruppi" value={groups.data?.length ?? 0} />
-        <Metric icon={<ReceiptText />} title="Spese totali" value={allExpenses.data?.length ?? 0} />
-        <Metric icon={<WalletCards />} title="Da saldare" value={fmt(openDebt, currentGroup?.currency ?? 'EUR')} />
-        <section className="panel group-list-panel full dashboard-groups-panel"><div className="section-title"><h2>I tuoi gruppi</h2><button onClick={() => { setTab('groups'); setGroupFormOpen(true); }}><Plus size={15} /> Crea gruppo</button></div>
-          <p className="section-subtitle">Vedi solo i gruppi a cui partecipi. Tocca una card per aprire spese, saldi e archivio scontrini.</p>
-          <div className="group-cards">{(groups.data ?? []).map((g, i) => { const gt = groupTotals.find(x => x.id === g.id); return <button key={g.id} className={`group-card group-card-dashboard tone-${i % 4}`} onClick={() => { setSelectedGroup(g.id); setTab('expenses'); }}><span>{g.name}</span><b>{fmt(gt?.total ?? 0, g.currency)}</b><small>{g.members.length} membri · {gt?.count ?? 0} spese attive</small></button>; })}</div>
-          {!groups.data?.length && <Empty title="Nessun gruppo" text="Crea il primo gruppo e aggiungi utenti già registrati via email." />}
-        </section>
-        <section className="panel full notification-panel"><div><h2>Notifiche spese</h2><p>Attivale su questo telefono per ricevere avvisi anche quando l’app è chiusa. Su iPhone è più affidabile se aggiungi FairSplit alla schermata Home.</p></div><button className="secondary" onClick={() => enableNotifications.mutate()} disabled={enableNotifications.isPending}><Bell size={16} /> {enableNotifications.isPending ? 'Attivo...' : 'Attiva notifiche'}</button>{notificationStatus && <small>{notificationStatus}</small>}</section>
+      {tab === 'dashboard' && <section className="personal-home-wrap">
+        <PersonalHome user={me.data!} onOpenShared={() => setTab('expenses')} groupCount={groups.data?.length ?? 0} openDebt={openDebt} />
+        <section className="panel notification-panel personal-notification"><div><h2>Notifiche condivise</h2><p>Ricevi gli aggiornamenti dei gruppi anche quando l’app è chiusa.</p></div><button className="secondary" onClick={() => enableNotifications.mutate()} disabled={enableNotifications.isPending}><Bell size={16} /> {enableNotifications.isPending ? 'Attivo...' : 'Attiva'}</button>{notificationStatus && <small>{notificationStatus}</small>}</section>
       </section>}
 
       {tab === 'expenses' && <section className="page-grid expenses-layout expenses-redesign">
@@ -383,6 +384,205 @@ function App({ onLogout }: { onLogout: () => void }) {
     </section>
     {openedReceipt && <div className="receipt-modal" role="dialog" aria-modal="true" aria-label="Scansione scontrino" onClick={() => setOpenedReceipt(null)}><div className="receipt-modal-card" onClick={e => e.stopPropagation()}><div className="section-title"><div><h2>{openedReceipt.note || openedReceipt.fileName || 'Scontrino scansionato'}</h2>{openedReceipt.expense && <p className="section-subtitle">Collegato a {openedReceipt.expense.title}</p>}</div><button type="button" className="secondary" onClick={() => setOpenedReceipt(null)}>Chiudi</button></div><img src={openedReceipt.imageDataUrl} alt={openedReceipt.note || 'Scontrino scansionato'} /><div className="receipt-actions"><button type="button" className="primary" onClick={() => openDataUrl(openedReceipt.imageDataUrl, openedReceipt.fileName || 'scontrino.jpg')}><ExternalLink size={15} /> Apri in nuova scheda</button><button type="button" className="secondary" onClick={() => downloadDataUrl(openedReceipt.imageDataUrl, openedReceipt.fileName || 'scontrino.jpg')}><Download size={15} /> Scarica</button></div></div></div>}
   </main>;
+}
+
+function PersonalHome({ user, onOpenShared, groupCount, openDebt }: { user: User; onOpenShared: () => void; groupCount: number; openDebt: number }) {
+  const qc = useQueryClient();
+  const month = currentMonthKey();
+  const today = new Date();
+  const [planOpen, setPlanOpen] = useState(false);
+  const [incomeInput, setIncomeInput] = useState('');
+  const [savingsInput, setSavingsInput] = useState('');
+  const [personalTitle, setPersonalTitle] = useState('');
+  const [personalAmount, setPersonalAmount] = useState('');
+  const [personalCategory, setPersonalCategory] = useState('general');
+  const [recurringOpen, setRecurringOpen] = useState(false);
+  const [recurringTitle, setRecurringTitle] = useState('');
+  const [recurringAmount, setRecurringAmount] = useState('');
+  const [billingDay, setBillingDay] = useState(String(today.getDate()));
+  const [wishlistOpen, setWishlistOpen] = useState(false);
+  const [wishlistTitle, setWishlistTitle] = useState('');
+  const [wishlistCost, setWishlistCost] = useState('');
+  const [wishlistPriority, setWishlistPriority] = useState<WishlistItem['priority']>('MEDIUM');
+
+  const overview = useQuery({
+    queryKey: ['personal-overview', month],
+    queryFn: () => api<PersonalOverview>(`/personal/overview?month=${month}`)
+  });
+  const data = overview.data;
+
+  useEffect(() => {
+    if (!data) return;
+    setIncomeInput(data.plan ? formatMoneyInput(data.plan.income) : '');
+    setSavingsInput(data.plan ? formatMoneyInput(data.plan.savingsTarget) : '');
+    if (!data.plan) setPlanOpen(true);
+  }, [data?.plan?.id, data?.plan?.updatedAt]);
+
+  const refreshPersonal = () => qc.invalidateQueries({ queryKey: ['personal-overview', month] });
+  const savePlan = useMutation({
+    mutationFn: (payload: { income: number; savingsTarget: number }) => api('/personal/plan', { method: 'PUT', body: JSON.stringify({ month, ...payload }) }),
+    onSuccess: () => { setPlanOpen(false); refreshPersonal(); }
+  });
+  const addPersonalExpense = useMutation({
+    mutationFn: (payload: { title: string; amount: number; category: string }) => api('/personal/expenses', { method: 'POST', body: JSON.stringify(payload) }),
+    onSuccess: () => { setPersonalTitle(''); setPersonalAmount(''); setPersonalCategory('general'); refreshPersonal(); }
+  });
+  const deletePersonalExpense = useMutation({ mutationFn: (id: string) => api(`/personal/expenses/${id}`, { method: 'DELETE' }), onSuccess: refreshPersonal });
+  const addRecurring = useMutation({
+    mutationFn: (payload: { title: string; amount: number; billingDay: number; category: string }) => api('/personal/recurring', { method: 'POST', body: JSON.stringify(payload) }),
+    onSuccess: () => { setRecurringTitle(''); setRecurringAmount(''); setBillingDay(String(today.getDate())); setRecurringOpen(false); refreshPersonal(); }
+  });
+  const deleteRecurring = useMutation({ mutationFn: (id: string) => api(`/personal/recurring/${id}`, { method: 'DELETE' }), onSuccess: refreshPersonal });
+  const addWishlist = useMutation({
+    mutationFn: (payload: { title: string; estimatedCost: number; priority: WishlistItem['priority'] }) => api('/personal/wishlist', { method: 'POST', body: JSON.stringify(payload) }),
+    onSuccess: () => { setWishlistTitle(''); setWishlistCost(''); setWishlistPriority('MEDIUM'); setWishlistOpen(false); refreshPersonal(); }
+  });
+  const updateWishlist = useMutation({ mutationFn: ({ id, status }: { id: string; status: WishlistItem['status'] }) => api(`/personal/wishlist/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }), onSuccess: refreshPersonal });
+  const deleteWishlist = useMutation({ mutationFn: (id: string) => api(`/personal/wishlist/${id}`, { method: 'DELETE' }), onSuccess: refreshPersonal });
+
+  const income = data?.plan?.income ?? 0;
+  const savingsTarget = data?.plan?.savingsTarget ?? 0;
+  const fixedTotal = (data?.recurring ?? []).reduce((sum, expense) => sum + expense.amount, 0);
+  const spent = (data?.expenses ?? []).reduce((sum, expense) => sum + expense.amount, 0);
+  const spendableAtStart = Math.max(0, income - savingsTarget - fixedTotal);
+  const remaining = income - savingsTarget - fixedTotal - spent;
+  const remainingDays = daysRemainingInMonth(today);
+  const weeklyBudget = Math.max(0, remaining) * Math.min(7, remainingDays) / Math.max(1, remainingDays);
+  const dailyBudget = Math.max(0, remaining) / Math.max(1, remainingDays);
+  const spentPercent = spendableAtStart > 0 ? Math.min(100, Math.round(spent / spendableAtStart * 100)) : 0;
+  const upcoming = useMemo(() => (data?.recurring ?? []).map(expense => ({ ...expense, due: nextRecurringDate(expense.billingDay, today) })).sort((a, b) => a.due.getTime() - b.due.getTime()).slice(0, 4), [data?.recurring]);
+  const currency = user.defaultCurrency || 'EUR';
+
+  function submitPlan(e: React.FormEvent) {
+    e.preventDefault();
+    savePlan.mutate({ income: parseAmount(incomeInput), savingsTarget: parseAmount(savingsInput) });
+  }
+
+  function submitPersonalExpense(e: React.FormEvent) {
+    e.preventDefault();
+    const amount = parseAmount(personalAmount);
+    if (!personalTitle.trim() || amount <= 0) return;
+    addPersonalExpense.mutate({ title: personalTitle.trim(), amount, category: personalCategory });
+  }
+
+  function submitRecurring(e: React.FormEvent) {
+    e.preventDefault();
+    const amount = parseAmount(recurringAmount);
+    const day = Math.min(31, Math.max(1, Number(billingDay)));
+    if (!recurringTitle.trim() || amount <= 0) return;
+    addRecurring.mutate({ title: recurringTitle.trim(), amount, billingDay: day, category: 'home' });
+  }
+
+  function submitWishlist(e: React.FormEvent) {
+    e.preventDefault();
+    const estimatedCost = parseAmount(wishlistCost);
+    if (!wishlistTitle.trim() || estimatedCost <= 0) return;
+    addWishlist.mutate({ title: wishlistTitle.trim(), estimatedCost, priority: wishlistPriority });
+  }
+
+  if (overview.isLoading) return <section className="panel personal-loading">Sto preparando il tuo mese…</section>;
+  if (overview.error) return <section className="panel"><h2>Non riesco a caricare il budget personale</h2><p className="error">{translateError(overview.error.message)}</p></section>;
+
+  return <div className="personal-dashboard">
+    <section className={`budget-hero ${remaining < 0 ? 'over-budget' : ''}`}>
+      <div className="budget-hero-copy">
+        <span className="money-kicker"><CalendarDays size={15} /> Budget di questa settimana</span>
+        <strong>{data?.plan ? fmt(weeklyBudget, currency) : 'Da impostare'}</strong>
+        <p>{data?.plan ? `È la cifra che puoi usare nei prossimi 7 giorni restando dentro il piano di ${monthName(today)}.` : 'Inserisci entrate e obiettivo di risparmio: da quel momento FairSplit farà i conti per te.'}</p>
+        <button type="button" className="budget-settings" onClick={() => setPlanOpen(value => !value)}>{data?.plan ? 'Modifica piano mensile' : 'Imposta il mese'} <ChevronRight size={16} /></button>
+      </div>
+      <div className="budget-side">
+        <div><span>Disponibile fino a fine mese</span><b>{fmt(remaining, currency)}</b></div>
+        <div><span>Media consigliata al giorno</span><b>{fmt(dailyBudget, currency)}</b></div>
+        <div className="budget-progress"><span style={{ width: `${spentPercent}%` }} /></div>
+        <small>Hai usato il {spentPercent}% del budget libero del mese</small>
+      </div>
+    </section>
+
+    {planOpen && <section className="panel plan-editor">
+      <div className="section-title"><div><span className="section-kicker">Piano mensile</span><h2>Due numeri, poi fa tutto l’app</h2></div><button className="ghost" type="button" onClick={() => setPlanOpen(false)}>Chiudi</button></div>
+      <form className="form plan-form" onSubmit={submitPlan}>
+        <label>Entrate del mese<input type="text" inputMode="decimal" value={incomeInput} onChange={e => setIncomeInput(cleanMoneyInput(e.target.value))} placeholder="Es. 1.200" /></label>
+        <label>Voglio mettere da parte<input type="text" inputMode="decimal" value={savingsInput} onChange={e => setSavingsInput(cleanMoneyInput(e.target.value))} placeholder="Es. 250" /></label>
+        <button className="primary" disabled={savePlan.isPending || parseAmount(incomeInput) <= 0}><Save size={16} /> Salva piano</button>
+      </form>
+      {savePlan.error && <p className="error">{translateError(savePlan.error.message)}</p>}
+    </section>}
+
+    <section className="panel quick-personal-expense">
+      <div><span className="section-kicker">Aggiunta rapida</span><h2>Cosa hai appena pagato?</h2><p>Solo descrizione, importo e categoria. Niente divisioni o passaggi inutili.</p></div>
+      <form onSubmit={submitPersonalExpense}>
+        <input value={personalTitle} onChange={e => setPersonalTitle(e.target.value)} placeholder="Es. pranzo, benzina, spesa…" aria-label="Descrizione spesa" />
+        <input type="text" inputMode="decimal" value={personalAmount} onChange={e => setPersonalAmount(cleanMoneyInput(e.target.value))} placeholder="0,00 €" aria-label="Importo spesa" />
+        <select value={personalCategory} onChange={e => setPersonalCategory(e.target.value)} aria-label="Categoria spesa">{CATEGORIES.map(([id, label]) => <option key={id} value={id}>{label}</option>)}</select>
+        <button className="primary" disabled={addPersonalExpense.isPending || !personalTitle.trim() || parseAmount(personalAmount) <= 0}><Plus size={17} /> Aggiungi</button>
+      </form>
+      {addPersonalExpense.error && <p className="error">{translateError(addPersonalExpense.error.message)}</p>}
+    </section>
+
+    <div className="personal-overview-grid">
+      <section className="panel upcoming-panel">
+        <div className="section-title"><div><span className="section-kicker">In arrivo</span><h2>Prossime spese fisse</h2></div><button className="secondary compact-button" type="button" onClick={() => setRecurringOpen(value => !value)}><Plus size={15} /> Aggiungi</button></div>
+        {recurringOpen && <form className="mini-create-form" onSubmit={submitRecurring}>
+          <input value={recurringTitle} onChange={e => setRecurringTitle(e.target.value)} placeholder="Netflix, palestra, telefono…" />
+          <input type="text" inputMode="decimal" value={recurringAmount} onChange={e => setRecurringAmount(cleanMoneyInput(e.target.value))} placeholder="Importo" />
+          <label>Giorno<input type="number" min="1" max="31" value={billingDay} onChange={e => setBillingDay(e.target.value)} /></label>
+          <button className="primary" disabled={addRecurring.isPending}>Salva</button>
+        </form>}
+        {upcoming.length ? <div className="upcoming-list">{upcoming.map(item => <article key={item.id}>
+          <div className="date-badge"><span>{item.due.toLocaleDateString('it-IT', { month: 'short' })}</span><b>{item.due.getDate()}</b></div>
+          <div><b>{item.title}</b><small>{item.due.toLocaleDateString('it-IT', { weekday: 'long' })}</small></div>
+          <strong>{fmt(item.amount, currency)}</strong>
+          <button className="icon-danger" type="button" aria-label={`Elimina ${item.title}`} onClick={() => window.confirm(`Eliminare ${item.title} dalle spese fisse?`) && deleteRecurring.mutate(item.id)}><Trash2 size={15} /></button>
+        </article>)}</div> : <Empty title="Nessuna spesa fissa" text="Aggiungi affitto, telefono e abbonamenti: verranno già sottratti dal budget." />}
+        <div className="fixed-total"><span>Totale impegnato ogni mese</span><b>{fmt(fixedTotal, currency)}</b></div>
+      </section>
+
+      <section className="panel month-summary-panel">
+        <span className="section-kicker">Il tuo mese</span><h2>Dove andranno i soldi</h2>
+        <div className="money-flow">
+          <div><span>Entrate</span><b>{fmt(income, currency)}</b></div>
+          <div><span>Risparmio protetto</span><b>{fmt(savingsTarget, currency)}</b></div>
+          <div><span>Spese fisse</span><b>{fmt(fixedTotal, currency)}</b></div>
+          <div><span>Spese già fatte</span><b>{fmt(spent, currency)}</b></div>
+        </div>
+        <div className="saving-callout"><PiggyBank size={24} /><div><span>Obiettivo risparmio</span><b>{savingsTarget > 0 ? `${Math.round(Math.min(1, Math.max(0, income - fixedTotal - spent) / savingsTarget) * 100)}% ancora coperto` : 'Da impostare'}</b></div></div>
+      </section>
+    </div>
+
+    <section className="panel personal-expense-list">
+      <div className="section-title"><div><span className="section-kicker">{monthName(today)}</span><h2>Spese personali del mese</h2></div><strong>{fmt(spent, currency)}</strong></div>
+      {data?.expenses.length ? <div>{data.expenses.map(expense => <article key={expense.id}>
+        <div className={`category-dot category-${expense.category}`} />
+        <div><b>{expense.title}</b><small>{labelCategory(expense.category)} · {new Date(expense.date).toLocaleDateString('it-IT')}</small></div>
+        <strong>{fmt(expense.amount, currency)}</strong>
+        <button className="icon-danger" type="button" aria-label={`Elimina ${expense.title}`} onClick={() => window.confirm(`Eliminare la spesa “${expense.title}”?`) && deletePersonalExpense.mutate(expense.id)}><Trash2 size={15} /></button>
+      </article>)}</div> : <Empty title="Ancora nessuna spesa personale" text="Quando paghi qualcosa, aggiungila dal riquadro rapido qui sopra." />}
+    </section>
+
+    <section className="panel wishlist-panel">
+      <div className="section-title"><div><span className="section-kicker">Prima di comprare</span><h2>Lista desideri</h2></div><button className="secondary compact-button" type="button" onClick={() => setWishlistOpen(value => !value)}><Plus size={15} /> Aggiungi</button></div>
+      <p className="section-subtitle">Metti qui gli acquisti non urgenti: vedere il loro peso sul budget aiuta a decidere con calma.</p>
+      {wishlistOpen && <form className="mini-create-form wishlist-create" onSubmit={submitWishlist}>
+        <input value={wishlistTitle} onChange={e => setWishlistTitle(e.target.value)} placeholder="Cosa vorresti comprare?" />
+        <input type="text" inputMode="decimal" value={wishlistCost} onChange={e => setWishlistCost(cleanMoneyInput(e.target.value))} placeholder="Costo previsto" />
+        <select value={wishlistPriority} onChange={e => setWishlistPriority(e.target.value as WishlistItem['priority'])}><option value="LOW">Posso aspettare</option><option value="MEDIUM">Mi interessa</option><option value="HIGH">È importante</option></select>
+        <button className="primary" disabled={addWishlist.isPending}>Salva</button>
+      </form>}
+      {data?.wishlist.length ? <div className="wishlist-grid">{data.wishlist.map(item => {
+        const missing = Math.max(0, item.estimatedCost - Math.max(0, remaining));
+        return <article key={item.id} className={item.status === 'BOUGHT' ? 'bought' : ''}>
+          <div className="wish-icon"><ShoppingBag size={20} /></div>
+          <div className="wish-copy"><span className={`priority priority-${item.priority.toLowerCase()}`}>{priorityLabel(item.priority)}</span><b>{item.title}</b><strong>{fmt(item.estimatedCost, currency)}</strong><small>{missing === 0 ? 'Compatibile con il disponibile attuale' : `Mancano ${fmt(missing, currency)} rispetto al disponibile`}</small></div>
+          <div className="wish-actions"><button type="button" className="wish-done" title="Segna come acquistato" onClick={() => updateWishlist.mutate({ id: item.id, status: item.status === 'BOUGHT' ? 'PLANNED' : 'BOUGHT' })}><Check size={16} /></button><button type="button" className="icon-danger" title="Elimina" onClick={() => window.confirm(`Rimuovere “${item.title}” dalla lista?`) && deleteWishlist.mutate(item.id)}><Trash2 size={15} /></button></div>
+        </article>;
+      })}</div> : <Empty title="Lista desideri vuota" text="Aggiungi qui ciò che vorresti comprare senza trasformarlo subito in una spesa." />}
+    </section>
+
+    <button type="button" className="shared-teaser" onClick={onOpenShared}>
+      <div><Users size={21} /><span><b>Spese condivise</b><small>{groupCount} gruppi · {fmt(openDebt, currency)} da saldare</small></span></div><ChevronRight size={20} />
+    </button>
+  </div>;
 }
 
 
@@ -482,6 +682,20 @@ function urlBase64ToUint8Array(base64String: string) {
 
 function parseAmount(value: string) { const n = Number(value.replace(',', '.')); return Number.isFinite(n) ? n : 0; }
 function cleanMoneyInput(value: string) { return value.replace(/[^0-9,.]/g, '').replace(/([,.].*)[,.]/g, '$1'); }
+function currentMonthKey(date = new Date()) { return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`; }
+function monthName(date: Date) { const value = date.toLocaleDateString('it-IT', { month: 'long' }); return value.charAt(0).toUpperCase() + value.slice(1); }
+function daysRemainingInMonth(date: Date) { return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate() - date.getDate() + 1; }
+function nextRecurringDate(day: number, from: Date) {
+  const startOfToday = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+  const currentLastDay = new Date(from.getFullYear(), from.getMonth() + 1, 0).getDate();
+  let due = new Date(from.getFullYear(), from.getMonth(), Math.min(day, currentLastDay));
+  if (due < startOfToday) {
+    const nextLastDay = new Date(from.getFullYear(), from.getMonth() + 2, 0).getDate();
+    due = new Date(from.getFullYear(), from.getMonth() + 1, Math.min(day, nextLastDay));
+  }
+  return due;
+}
+function priorityLabel(priority: WishlistItem['priority']) { return ({ LOW: 'Può aspettare', MEDIUM: 'Mi interessa', HIGH: 'Importante' } as const)[priority]; }
 function equalSplits(users: User[], total: number) { if (!users.length) return []; const cents = Math.round(total * 100); const base = Math.floor(cents / users.length); let rest = cents - base * users.length; return users.map(u => ({ userId: u.id, amount: (base + (rest-- > 0 ? 1 : 0)) / 100 })); }
 function aggregateMemberBalances(expenses: Expense[], members: User[], settlements: Settlement[] = []) {
   const map = new Map(members.map(m => [m.id, { user: m, paid: 0, owed: 0, settledOut: 0, settledIn: 0, net: 0 }]));
@@ -505,7 +719,6 @@ function aggregateMemberBalances(expenses: Expense[], members: User[], settlemen
 }
 function aggregateByCategory(expenses: Expense[]) { const map = new Map<string, number>(); for (const e of expenses) map.set(e.category || 'general', (map.get(e.category || 'general') ?? 0) + e.total); return [...map.entries()].map(([category, total]) => ({ category, total })).sort((a, b) => b.total - a.total); }
 function aggregateByUserShares(expenses: Expense[], members: User[]) { const names = new Map(members.map(m => [m.id, m.name])); const map = new Map<string, number>(); for (const e of expenses) for (const s of e.splits ?? []) { const id = s.userId ?? s.user?.id; if (id) map.set(id, (map.get(id) ?? 0) + Number(s.amount ?? 0)); } return [...map.entries()].map(([id, total]) => ({ name: names.get(id) ?? id.slice(0, 6), total })).sort((a, b) => b.total - a.total); }
-function aggregateGroups(expenses: Expense[], groups: Group[]) { const totals = new Map<string, number>(); const counts = new Map<string, number>(); for (const e of expenses) { const id = e.group?.id ?? e.groupId; if (id) { totals.set(id, (totals.get(id) ?? 0) + e.total); counts.set(id, (counts.get(id) ?? 0) + 1); } } const max = Math.max(1, ...totals.values()); return [...groups.map(g => ({ id: g.id, name: g.name, currency: g.currency, total: totals.get(g.id) ?? 0, count: counts.get(g.id) ?? 0, percent: Math.round(((totals.get(g.id) ?? 0) / max) * 100) }))].sort((a, b) => b.total - a.total); }
 function translateError(message?: string) {
   const m = message ?? '';
   if (m.includes('EMAIL_ALREADY_REGISTERED')) return 'Questa email è già registrata.';
@@ -528,8 +741,7 @@ function translateError(message?: string) {
   if (m.includes('__HTTP_500')) return 'Errore server: controlla i Function Logs su Vercel oppure apri /api/debug.';
   return m.replace(/__HTTP_\d+/, '') || 'Errore imprevisto';
 }
-function tabLabel(tab: Tab) { return ({ dashboard: 'Dashboard', expenses: 'Gestione spese', groups: 'Gruppi e membri', insights: 'Grafici e pagamenti' } as Record<Tab, string>)[tab]; }
-function Metric({ icon, title, value }: { icon: React.ReactNode; title: string; value: React.ReactNode }) { return <div className="metric"><div>{icon}</div><span>{title}</span><b>{value}</b></div>; }
+function tabLabel(tab: Tab) { return ({ dashboard: 'Il mio mese', expenses: 'Spese condivise', groups: 'Gruppi e membri', insights: 'Analisi condivise' } as Record<Tab, string>)[tab]; }
 function Empty({ title, text }: { title: string; text: string }) { return <div className="empty"><h3>{title}</h3><p>{text}</p></div>; }
 function nameOf(users: User[] | undefined, id: string) { return users?.find(u => u.id === id)?.name ?? id.slice(0, 6); }
 function ExpenseRow({ e, onEdit, onDelete }: { e: Expense; onEdit: () => void; onDelete: () => void }) { return <article className="expense"><div><b>{e.title}</b><span>{e.group?.name ?? 'Gruppo'} · {labelCategory(e.category)} · {new Date(e.date).toLocaleDateString('it-IT')}</span></div><strong>{fmt(e.total, e.currency)}</strong><div className="actions"><button onClick={onEdit}>Modifica</button><button className="danger" onClick={onDelete}><Trash2 size={14} /> Elimina</button></div></article>; }

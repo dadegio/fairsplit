@@ -4,7 +4,15 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="ca68116b-1d03-4b2e-b257-b5e49efc6d54" name="Changes" comment="" />
+    <list default="true" id="ca68116b-1d03-4b2e-b257-b5e49efc6d54" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/server/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/prisma/schema.prisma" beforeDir="false" afterPath="$PROJECT_DIR$/server/prisma/schema.prisma" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/server/src/routes.ts" beforeDir="false" afterPath="$PROJECT_DIR$/server/src/routes.ts" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/package.json" beforeDir="false" afterPath="$PROJECT_DIR$/web/package.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/src/App.tsx" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/App.tsx" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/src/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/src/style.css" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -13,21 +21,21 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="GitHubPullRequestSearchHistory"><![CDATA[{
-  "lastFilter": {
-    "state": "OPEN",
-    "assignee": "dadegio"
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;dadegio&quot;
   }
-}]]></component>
+}</component>
   <component name="GithubPullRequestsUISettings"><![CDATA[{
   "selectedUrlAndAccountId": {
     "url": "https://github.com/dadegio/fairsplit.git",
-    "accountId": "eaf1e399-148d-4584-8b6c-108d5ee18abf"
+    "accountId": "c2151b3b-2198-4cb1-a461-a5467b7dcfbc"
   }
 }]]></component>
-  <component name="ProjectColorInfo"><![CDATA[{
-  "associatedIndex": 6
-}]]></component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 6
+}</component>
   <component name="ProjectId" id="3DykeEgnr2AVw9QGmNM0aKSTfHF" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
@@ -38,13 +46,17 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.typescript.service.memoryLimit.init": "true",
+    "com.intellij.ml.llm.matterhorn.ej.ui.settings.DefaultModelSelectionForGA.v1": "true",
     "git-widget-placeholder": "main",
+    "junie.onboarding.icon.badge.shown": "true",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
+    "to.speed.mode.migration.done": "true",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
@@ -64,6 +76,7 @@
       <option name="presentableId" value="Default" />
       <updated>1779261789485</updated>
       <workItem from="1779261790506" duration="515000" />
+      <workItem from="1791369163827" duration="408000" />
     </task>
     <servers />
   </component>

@@ -2,6 +2,8 @@
 
 App full-stack TypeScript per gestire spese condivise con gruppi privati, account email/password, saldi, pagamenti, ricerca, scontrini e grafici.
 
+La home include anche una gestione personale mensile separata dai gruppi: entrate, obiettivo di risparmio, budget settimanale, spese fisse, registro rapido delle spese e lista desideri.
+
 ## Avvio
 
 ```bash
@@ -34,6 +36,10 @@ Account demo:
 - Grafici di ripartizione per categoria e per persona.
 - Export CSV.
 - Tutte le funzioni sono disponibili per tutti: nessun piano premium.
+- Budget personale settimanale calcolato da entrate, risparmio, costi fissi e spese già sostenute.
+- Spese personali private e separate dalle divisioni di gruppo.
+- Abbonamenti e costi ricorrenti con prossima scadenza.
+- Lista desideri con priorità e confronto immediato con il disponibile.
 
 ## Note OCR
 

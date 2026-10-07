@@ -593,6 +593,443 @@ button, input, select, textarea { max-width: 100%; }
   .empty { padding: 18px; border-radius: 18px; }
 }
 
+/* Personal money dashboard -------------------------------------------------
+   A calmer, more legible visual language than the original purple dashboard. */
+:root {
+  color: #17231d;
+  background: #f3f1eb;
+}
+body {
+  background: #f3f1eb;
+}
+.sidebar {
+  background: #18231e;
+}
+.sidebar nav button.active,
+.sidebar nav button:hover {
+  background: #2d493b;
+}
+.logo,
+.primary {
+  background: #28664e;
+  box-shadow: none;
+}
+.secondary {
+  color: #24533f;
+  background: #e5efe9;
+}
+input:focus,
+select:focus {
+  border-color: #4e806a;
+  box-shadow: 0 0 0 4px rgba(78,128,106,.12);
+}
+.panel,
+.metric,
+.auth-card {
+  border-color: #e4e0d7;
+  box-shadow: 0 12px 36px rgba(31,42,36,.07);
+}
+.personal-home-wrap,
+.personal-dashboard {
+  display: grid;
+  gap: 18px;
+}
+.personal-dashboard {
+  max-width: 1220px;
+}
+.budget-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(280px, .65fr);
+  gap: 34px;
+  padding: 34px;
+  overflow: hidden;
+  color: #f7f5ef;
+  background: #1e392d;
+  border: 1px solid #294a3b;
+  border-radius: 30px;
+  box-shadow: 0 20px 50px rgba(26,51,40,.18);
+}
+.budget-hero.over-budget {
+  background: #512f2c;
+  border-color: #75413c;
+}
+.budget-hero-copy {
+  display: grid;
+  align-content: start;
+  justify-items: start;
+}
+.money-kicker,
+.section-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #8fd3b2;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+.section-kicker { color: #527263; }
+.budget-hero-copy > strong {
+  margin: 10px 0 8px;
+  font-size: clamp(46px, 7vw, 76px);
+  line-height: .98;
+  letter-spacing: -.055em;
+}
+.budget-hero-copy p {
+  max-width: 650px;
+  margin: 0;
+  color: #c8d8cf;
+  font-size: 15px;
+  line-height: 1.55;
+}
+.budget-settings {
+  margin-top: 22px;
+  padding: 0;
+  color: #f7f5ef;
+  background: transparent;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.budget-side {
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 22px;
+  background: rgba(255,255,255,.06);
+}
+.budget-side > div:not(.budget-progress) {
+  display: grid;
+  gap: 5px;
+}
+.budget-side span,
+.budget-side small {
+  color: #c8d8cf;
+}
+.budget-side b {
+  font-size: 25px;
+  letter-spacing: -.025em;
+}
+.budget-progress {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255,255,255,.13);
+}
+.budget-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #8fd3b2;
+}
+.plan-editor {
+  border-color: #bfd8ca;
+  background: #f6fbf8;
+}
+.plan-editor h2,
+.quick-personal-expense h2,
+.upcoming-panel h2,
+.month-summary-panel h2,
+.personal-expense-list h2,
+.wishlist-panel h2 {
+  margin: 3px 0 0;
+}
+.plan-form {
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  margin-top: 18px;
+}
+.quick-personal-expense {
+  display: grid;
+  grid-template-columns: minmax(230px, .65fr) minmax(0, 1.35fr);
+  gap: 24px;
+  align-items: end;
+}
+.quick-personal-expense p {
+  margin: 7px 0 0;
+  color: #68756e;
+  line-height: 1.45;
+}
+.quick-personal-expense form {
+  display: grid;
+  grid-template-columns: minmax(160px, 1.4fr) minmax(110px, .65fr) minmax(130px, .75fr) auto;
+  gap: 9px;
+}
+.personal-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(300px, .9fr);
+  gap: 18px;
+}
+.compact-button {
+  min-height: 38px;
+  padding: 8px 11px;
+}
+.mini-create-form {
+  display: grid;
+  grid-template-columns: 1fr .55fr 100px auto;
+  gap: 8px;
+  align-items: end;
+  margin: 15px 0;
+  padding: 14px;
+  border: 1px solid #d9e5dd;
+  border-radius: 18px;
+  background: #f7faf8;
+}
+.mini-create-form label {
+  display: grid;
+  gap: 5px;
+  color: #617068;
+  font-size: 12px;
+  font-weight: 800;
+}
+.upcoming-list {
+  display: grid;
+  gap: 2px;
+  margin-top: 13px;
+}
+.upcoming-list article,
+.personal-expense-list article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 13px 0;
+  border-bottom: 1px solid #ebe8e1;
+}
+.upcoming-list article:last-child,
+.personal-expense-list article:last-child {
+  border-bottom: 0;
+}
+.upcoming-list article > div:nth-child(2),
+.personal-expense-list article > div:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+.upcoming-list small,
+.personal-expense-list small,
+.wish-copy small {
+  color: #778079;
+}
+.date-badge {
+  width: 48px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  border-radius: 14px;
+  color: #285f49;
+  background: #e4f0e9;
+}
+.date-badge span {
+  font-size: 10px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+.date-badge b {
+  font-size: 19px;
+}
+.icon-danger,
+.wish-done {
+  width: 35px;
+  height: 35px;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border-radius: 11px !important;
+  color: #9a4d46 !important;
+  background: #f8ecea !important;
+}
+.wish-done {
+  color: #28664e !important;
+  background: #e4f0e9 !important;
+}
+.fixed-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 15px;
+  border-top: 1px solid #d9d5cc;
+}
+.money-flow {
+  display: grid;
+  gap: 0;
+  margin-top: 13px;
+}
+.money-flow > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid #ebe8e1;
+}
+.money-flow span { color: #657068; }
+.saving-callout {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  padding: 15px;
+  color: #24533f;
+  border-radius: 17px;
+  background: #e7f1eb;
+}
+.saving-callout > div { display: grid; gap: 3px; }
+.saving-callout span { font-size: 12px; }
+.personal-expense-list > .section-title > strong {
+  font-size: 23px;
+}
+.category-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #759482;
+}
+.category-food { background: #d18a55; }
+.category-transport { background: #5f7fa5; }
+.category-shopping { background: #a66f8b; }
+.category-fun { background: #9a7b45; }
+.category-health { background: #ba625d; }
+.category-home { background: #5f8c73; }
+.wishlist-create {
+  grid-template-columns: 1fr .55fr .7fr auto;
+}
+.wishlist-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.wishlist-grid article {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+  padding: 15px;
+  border: 1px solid #e4e0d7;
+  border-radius: 18px;
+  background: #fbfaf7;
+}
+.wishlist-grid article.bought {
+  opacity: .58;
+}
+.wishlist-grid article.bought .wish-copy b {
+  text-decoration: line-through;
+}
+.wish-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: #775c35;
+  background: #f2eadc;
+}
+.wish-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+.wish-copy b { overflow-wrap: anywhere; }
+.wish-copy strong { font-size: 19px; }
+.priority {
+  width: fit-content;
+  padding: 4px 7px;
+  border-radius: 999px;
+  color: #6d634f;
+  background: #eeeae0;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.priority-high { color: #87463f; background: #f5e6e3; }
+.priority-low { color: #53705f; background: #e8f0eb; }
+.wish-actions {
+  display: flex;
+  gap: 6px;
+}
+.shared-teaser {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 17px 20px;
+  color: #33463c;
+  border: 1px solid #ddd8ce;
+  border-radius: 20px;
+  background: #eae7df;
+  text-align: left;
+}
+.shared-teaser > div,
+.shared-teaser span {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+.shared-teaser span {
+  display: grid;
+  gap: 2px;
+}
+.shared-teaser small { color: #6c756f; }
+.personal-notification {
+  max-width: 1220px;
+  background: #f8f7f3;
+}
+.personal-loading {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  color: #657068;
+  font-weight: 800;
+}
+
+@media (max-width: 1000px) {
+  .budget-hero,
+  .quick-personal-expense,
+  .personal-overview-grid {
+    grid-template-columns: 1fr;
+  }
+  .quick-personal-expense form {
+    grid-template-columns: 1fr 150px 150px auto;
+  }
+}
+
+@media (max-width: 760px) {
+  body { background: #f3f1eb; }
+  .sidebar { background: rgba(24,35,30,.97); }
+  .personal-home-wrap,
+  .personal-dashboard { gap: 12px; }
+  .budget-hero {
+    gap: 20px;
+    padding: 23px 19px;
+    border-radius: 24px;
+  }
+  .budget-hero-copy > strong { font-size: 46px; }
+  .budget-side { padding: 17px; }
+  .plan-form,
+  .quick-personal-expense form,
+  .mini-create-form,
+  .wishlist-create {
+    grid-template-columns: 1fr;
+  }
+  .wishlist-grid { grid-template-columns: 1fr; }
+  .upcoming-list article,
+  .personal-expense-list article {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .upcoming-list article > .icon-danger,
+  .personal-expense-list article > .icon-danger {
+    grid-column: 3;
+  }
+  .wishlist-grid article { grid-template-columns: auto minmax(0, 1fr); }
+  .wish-actions { grid-column: 1 / -1; justify-content: flex-end; }
+  .personal-notification { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 390px) {
   .workspace { padding-inline: 9px; }
   .topbar { margin-inline: -9px; padding-inline: 9px; }

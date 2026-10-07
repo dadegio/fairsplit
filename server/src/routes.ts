@@ -152,6 +152,134 @@ router.patch('/users/:id', asyncHandler(async (req, res) => {
   res.json({ ...updated, features: featuresForEveryone() });
 }));
 
+const monthSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+
+function monthBounds(month: string) {
+  const [year, monthNumber] = month.split('-').map(Number);
+  return {
+    start: new Date(Date.UTC(year, monthNumber - 1, 1)),
+    end: new Date(Date.UTC(year, monthNumber, 1))
+  };
+}
+
+function normalizePersonalOverview(data: any) {
+  return {
+    month: data.month,
+    plan: data.plan ? { ...data.plan, income: money(data.plan.income), savingsTarget: money(data.plan.savingsTarget) } : null,
+    expenses: data.expenses.map((expense: any) => ({ ...expense, amount: money(expense.amount) })),
+    recurring: data.recurring.map((expense: any) => ({ ...expense, amount: money(expense.amount) })),
+    wishlist: data.wishlist.map((item: any) => ({ ...item, estimatedCost: money(item.estimatedCost) }))
+  };
+}
+
+router.get('/personal/overview', asyncHandler(async (req, res) => {
+  const user = await currentUser(req);
+  const month = monthSchema.parse(String(req.query.month ?? new Date().toISOString().slice(0, 7)));
+  const { start, end } = monthBounds(month);
+  const [plan, expenses, recurring, wishlist] = await Promise.all([
+    prisma.personalMonthlyPlan.findUnique({ where: { userId_month: { userId: user.id, month } } }),
+    prisma.personalExpense.findMany({ where: { userId: user.id, date: { gte: start, lt: end } }, orderBy: [{ date: 'desc' }, { createdAt: 'desc' }] }),
+    prisma.personalRecurringExpense.findMany({ where: { userId: user.id, active: true }, orderBy: [{ billingDay: 'asc' }, { title: 'asc' }] }),
+    prisma.wishlistItem.findMany({ where: { userId: user.id, status: { not: 'ARCHIVED' } }, orderBy: [{ status: 'asc' }, { createdAt: 'desc' }] })
+  ]);
+  res.json(normalizePersonalOverview({ month, plan, expenses, recurring, wishlist }));
+}));
+
+router.put('/personal/plan', asyncHandler(async (req, res) => {
+  const user = await currentUser(req);
+  const body = z.object({ month: monthSchema, income: z.number().nonnegative(), savingsTarget: z.number().nonnegative() }).parse(req.body);
+  const plan = await prisma.personalMonthlyPlan.upsert({
+    where: { userId_month: { userId: user.id, month: body.month } },
+    update: { income: cents(body.income), savingsTarget: cents(body.savingsTarget) },
+    create: { userId: user.id, month: body.month, income: cents(body.income), savingsTarget: cents(body.savingsTarget) }
+  });
+  res.json({ ...plan, income: money(plan.income), savingsTarget: money(plan.savingsTarget) });
+}));
+
+router.post('/personal/expenses', asyncHandler(async (req, res) => {
+  const user = await currentUser(req);
+  const body = z.object({
+    title: z.string().trim().min(1),
+    amount: z.number().positive(),
+    category: z.string().default('general'),
+    date: z.string().datetime().optional()
+  }).parse(req.body);
+  const expense = await prisma.personalExpense.create({ data: {
+    userId: user.id,
+    title: body.title,
+    amount: cents(body.amount),
+    category: body.category,
+    date: body.date ? new Date(body.date) : new Date()
+  }});
+  res.status(201).json({ ...expense, amount: money(expense.amount) });
+}));
+
+router.delete('/personal/expenses/:id', asyncHandler(async (req, res) => {
+  const user = await currentUser(req);
+  const result = await prisma.personalExpense.deleteMany({ where: { id: req.params.id, userId: user.id } });
+  if (!result.count) return res.status(404).json({ error: 'PERSONAL_EXPENSE_NOT_FOUND' });
+  res.status(204).end();
+}));
+
+router.post('/personal/recurring', asyncHandler(async (req, res) => {
+  const user = await currentUser(req);
+  const body = z.object({
+    title: z.string().trim().min(1),
+    amount: z.number().positive(),
+    billingDay: z.number().int().min(1).max(31),
+    category: z.string().default('home')
+  }).parse(req.body);
+  const expense = await prisma.personalRecurringExpense.create({ data: {
+    userId: user.id,
+    title: body.title,
+    amount: cents(body.amount),
+    billingDay: body.billingDay,
+    category: body.category
+  }});
+  res.status(201).json({ ...expense, amount: money(expense.amount) });
+}));
+
+router.delete('/personal/recurring/:id', asyncHandler(async (req, res) => {
+  const user = await currentUser(req);
+  const result = await prisma.personalRecurringExpense.deleteMany({ where: { id: req.params.id, userId: user.id } });
+  if (!result.count) return res.status(404).json({ error: 'RECURRING_EXPENSE_NOT_FOUND' });
+  res.status(204).end();
+}));
+
+router.post('/personal/wishlist', asyncHandler(async (req, res) => {
+  const user = await currentUser(req);
+  const body = z.object({
+    title: z.string().trim().min(1),
+    estimatedCost: z.number().positive(),
+    priority: z.enum(['LOW', 'MEDIUM', 'HIGH']).default('MEDIUM'),
+    targetDate: z.string().datetime().optional()
+  }).parse(req.body);
+  const item = await prisma.wishlistItem.create({ data: {
+    userId: user.id,
+    title: body.title,
+    estimatedCost: cents(body.estimatedCost),
+    priority: body.priority,
+    targetDate: body.targetDate ? new Date(body.targetDate) : undefined
+  }});
+  res.status(201).json({ ...item, estimatedCost: money(item.estimatedCost) });
+}));
+
+router.patch('/personal/wishlist/:id', asyncHandler(async (req, res) => {
+  const user = await currentUser(req);
+  const body = z.object({ status: z.enum(['PLANNED', 'BOUGHT', 'ARCHIVED']) }).parse(req.body);
+  const existing = await prisma.wishlistItem.findFirst({ where: { id: req.params.id, userId: user.id } });
+  if (!existing) return res.status(404).json({ error: 'WISHLIST_ITEM_NOT_FOUND' });
+  const item = await prisma.wishlistItem.update({ where: { id: existing.id }, data: { status: body.status } });
+  res.json({ ...item, estimatedCost: money(item.estimatedCost) });
+}));
+
+router.delete('/personal/wishlist/:id', asyncHandler(async (req, res) => {
+  const user = await currentUser(req);
+  const result = await prisma.wishlistItem.deleteMany({ where: { id: req.params.id, userId: user.id } });
+  if (!result.count) return res.status(404).json({ error: 'WISHLIST_ITEM_NOT_FOUND' });
+  res.status(204).end();
+}));
+
 router.get('/notifications/config', asyncHandler(async (req, res) => {
   await currentUser(req);
   res.json({ enabled: Boolean(vapidPublicKey && vapidPrivateKey), publicKey: vapidPublicKey });
